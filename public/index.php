@@ -1,5 +1,4 @@
 <?php
-    include "header.php";
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use Dotenv\Dotenv;
@@ -9,13 +8,136 @@ $root = dirname(__DIR__);
 $dotenv = Dotenv::createImmutable($root);
 $dotenv->load();
 
+// Handle API requests (GET for images list)
+if(isset($_GET['api']) && $_GET['api'] === 'getImages'){
+    header('Content-Type: application/json');
+    try {
+        $cloudinaryController = new CloudinaryController();
+        $files = $cloudinaryController->getAllFilesFromCloud();
+        echo json_encode(['status' => 'success', 'data' => $files]);
+        exit;
+    } catch (Exception $e) {
+        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        exit;
+    }
+}
+
+// Handle DELETE request FIRST before any output
+if($_SERVER['REQUEST_METHOD'] === 'DELETE'){
+    header('Content-Type: application/json');
+    parse_str(file_get_contents("php://input"), $deleteVars);
+    if (isset($deleteVars['public_id'])) {
+        try {
+            $cloudinaryController = new CloudinaryController();
+            $result = $cloudinaryController->deleteFileFromCloud($deleteVars['public_id']);
+            echo json_encode(['status' => 'success', 'message' => 'File deleted successfully']);
+            exit;
+        } catch (Exception $e) {
+            echo json_encode(['status' => 'error', 'message' => 'Delete failed: ' . $e->getMessage()]);
+            exit;
+        }
+    } else {
+        echo json_encode(['status' => 'error', 'message' => 'No public_id provided']);
+        exit;
+    }
+}
+
+// Now include header for page rendering
+include "header.php";
+?>
+<script>
+// Load images from Cloudinary in real-time
+function loadImages() {
+    fetch('index.php?api=getImages')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok: ' + response.statusText);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.status === 'success') {
+                renderGallery(data.data);
+            } else {
+                console.error('API Error:', data.message);
+                renderGallery([]);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading images:', error);
+            renderGallery([]);
+        });
+}
+
+// Render gallery from image data
+function renderGallery(files) {
+    const gallery = document.querySelector('#all-gallery');
+    if (!gallery) {
+        console.error('Gallery container not found');
+        return;
+    }
+    
+    gallery.innerHTML = ''; // Clear existing images
+    
+    if (!files || files.length === 0) {
+        gallery.innerHTML = '<p class="text-gray-500">No images found</p>';
+        return;
+    }
+    
+    files.forEach(file => {
+        const div = document.createElement('div');
+        div.className = 'bg-white relative flex justify-center items-center flex-col rounded-lg shadow-md overflow-hidden';
+        div.innerHTML = `
+            <button onclick="deleteFile('${file.public_id}')" class="absolute cursor-pointer top-5 right-2 bg-white bg-opacity-75 rounded-full p-[5px_10px] hover:bg-opacity-100 z-10">
+                <i class="fas fa-trash text-gray-600"></i>
+            </button>
+            <img src="${file.secure_url}" alt="${file.public_id}" class="w-full h-48 object-cover">
+            <div class="p-4">
+                <h3 class="text-sm font-medium text-gray-900">${file.public_id}</h3>
+            </div>
+        `;
+        gallery.appendChild(div);
+    });
+}
+
+function deleteFile(publicId) {
+    fetch('index.php', {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+            'public_id': publicId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert(data.message);
+            // Reload images from Cloudinary to show real-time changes
+            loadImages();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Delete Error:', error);
+        alert('Failed to delete file: ' + error.message);
+    });
+}
+
+// Load images when page loads
+document.addEventListener('DOMContentLoaded', loadImages);
+</script>
+<?php
+
 // Handle Upload Image to Cloudinary
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_FILES['uploaded_file'])) {
             try {
                 $cloudinaryController = new CloudinaryController();
                 $result = $cloudinaryController->uploadFileToCloud($_FILES['uploaded_file']['tmp_name'], $_ENV['FOLDER_NAME']);
-                    echo '<script>alert("File uploaded successfully!");</script>';
+                echo '<script>alert("File uploaded successfully!"); my_modal_5.close(); loadImages();</script>';
             } catch (Exception $e) {
                 echo '<script>alert("Upload failed: ' . addslashes($e->getMessage()) . '");</script>';
             }
@@ -31,7 +153,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } catch (Exception $e) {
         echo '<script>alert("Failed to retrieve files: ' . addslashes($e->getMessage()) . '");</script>';
     }
-
 }
 
 ?>
@@ -116,21 +237,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <!-- Photo Grid -->
             <div class="flex-1 overflow-y-auto p-6">
-                 <div  class="grid grid-cols-5 gap-4">
-
-              <?php 
-          if(is_array($allFiles)){
-            foreach($allFiles as $file){
-                echo '<div class="bg-white rounded-lg shadow-md overflow-hidden">';
-                echo '<img src="' . htmlspecialchars($file['secure_url']) . '" alt="' . htmlspecialchars($file['public_id']) . '" class="w-full h-48 object-cover">';
-                echo '<div class="p-4">';
-                echo '<h3 class="text-sm font-medium text-gray-900">' . htmlspecialchars($file['public_id']) . '</h3>';
-                echo '</div>';
-                echo '</div>';
-            }
-        }
-              ?>
-               </div>
+                 <div id="all-gallery" class="grid grid-cols-5 gap-4">
+                     <!-- Images will be loaded here by JavaScript -->
+                 </div>
             </div>
         </div>
     </div>

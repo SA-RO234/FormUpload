@@ -36,4 +36,13 @@ class CloudinaryModel{
             return $e->getMessage();
         }
     }
+
+    //  Delete File from Cloudinary
+    public function deleteFile($publicId){
+        try {
+            return $this->configCloud->uploadApi()->destroy($publicId, ['resource_type' => 'image']);
+        } catch (Exception $e) {
+            return $e->getMessage();    
+        }
+    }
 }

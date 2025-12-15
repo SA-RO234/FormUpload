@@ -19,4 +19,11 @@ class CloudinaryController{
     public function getAllFilesFromCloud(){
         return $this->cloudModel->getAllFiles();
     }
+
+
+    // Delete File from Cloudinary
+
+    public function deleteFileFromCloud($publicId){
+        return $this->cloudModel->deleteFile($publicId);
+    }
 }
