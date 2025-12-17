@@ -1,12 +1,15 @@
 <?php
-require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/vendor/autoload.php';
 
 use Dotenv\Dotenv;
 use App\Controller\CloudinaryController;
 
-$root = dirname(__DIR__);
+// Project root is THIS directory
+$root = __DIR__;
+
 $dotenv = Dotenv::createImmutable($root);
 $dotenv->load();
+
 
 // Handle API requests (GET for images list)
 if(isset($_GET['api']) && $_GET['api'] === 'getImages'){
