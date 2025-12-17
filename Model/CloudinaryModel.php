@@ -10,7 +10,7 @@ class CloudinaryModel{
         $config = new CloudinaryConfig();
         $this->configCloud = $config->cloudinary;
     }
-
+  
     public function uploadFile($filePath, $folder)
     {
         try {
@@ -32,6 +32,27 @@ class CloudinaryModel{
               $imgResult =  json_decode(json_encode($image), true);
               return $imgResult['resources'];
           }
+        }catch (Exception $e){
+            return $e->getMessage();
+        }
+    }
+
+    //  get all file( pdf, docx, etc)
+    public function getAllGeneralFile($folder = null){
+        try {
+            $params = [
+                'resource_type' => 'raw',
+                'type' => 'upload',
+                'max_results' => 100
+            ];
+            if ($folder) {
+                $params['prefix'] = $folder;
+            }
+            $files = $this->configCloud->adminApi()->assets($params);
+            if(is_object($files)){
+                $fileResult = json_decode(json_encode($files), true);
+                return $fileResult['resources'];
+            }
         }catch (Exception $e){
             return $e->getMessage();
         }

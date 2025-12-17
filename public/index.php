@@ -22,6 +22,19 @@ if(isset($_GET['api']) && $_GET['api'] === 'getImages'){
     }
 }
 
+if(isset($_GET['api']) && $_GET['api'] === 'getGeneralFiles'){
+    header('Content-Type: application/json');
+    try {
+        $cloudinaryController = new CloudinaryController();
+        $files = $cloudinaryController->getAllGeneralFilesFromCloud($_GET['folder'] ?? null);
+        echo json_encode(['status' => 'success', 'data' => $files]);
+        exit;
+    } catch (Exception $e) {
+        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        exit;
+    }
+}
+
 // Handle DELETE request FIRST before any output
 if($_SERVER['REQUEST_METHOD'] === 'DELETE'){
     header('Content-Type: application/json');
@@ -41,7 +54,6 @@ if($_SERVER['REQUEST_METHOD'] === 'DELETE'){
         exit;
     }
 }
-
 // Now include header for page rendering
 include "header.php";
 ?>
@@ -68,6 +80,32 @@ function loadImages() {
             renderGallery([]);
         });
 }
+//  Show all general files (pdf, docx, etc)
+function loadGeneralFiles(folder = null) {
+    let url = 'index.php?api=getGeneralFiles';
+    if (folder) {
+        url += `&folder=${encodeURIComponent(folder)}`;
+    }
+    fetch(url)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok: ' + response.statusText);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.status === 'success') {
+                renderGallery(data.data);
+            } else {
+                console.error('API Error:', data.message);
+                renderGallery([]);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading general files:', error);
+            renderGallery([]);
+        });
+}   
 
 // Render gallery from image data
 function renderGallery(files) {
@@ -174,7 +212,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <i class="fas fa-layer-group w-5"></i>
                             <span>Video</span>
                         </a>
-                        <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100">
+                        <a href="" class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100">
                             <i class="fas fa-folder w-5"></i>
                             <span>File General(PDF, DOC, TXT)</span>
                         </a>

@@ -15,14 +15,16 @@ class CloudinaryController{
     }
 
     // get All Files
-
     public function getAllFilesFromCloud(){
         return $this->cloudModel->getAllFiles();
     }
 
+    //  Get All General Files
+    public function getAllGeneralFilesFromCloud($folder = null){
+        return $this->cloudModel->getAllGeneralFile($folder);
+    }
 
     // Delete File from Cloudinary
-
     public function deleteFileFromCloud($publicId){
         return $this->cloudModel->deleteFile($publicId);
     }
